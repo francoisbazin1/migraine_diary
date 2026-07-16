@@ -240,6 +240,7 @@
       <div class="unit" id="daysSinceLabel">days migraine-free</div>
     </div>
     <button class="bigbtn" id="logBtn">+ &nbsp;Log a migraine</button>
+    <button class="ghostbtn" id="warnBtn" style="width:100%;margin:-8px 0 18px">👁️ &nbsp;Log an early sign</button>
     <div class="statrow">
       <div class="card stat"><div class="v" id="stMonth">0</div><div class="l">this month</div></div>
       <div class="card stat"><div class="v" id="stAvgSev">–</div><div class="l">avg severity</div></div>
@@ -299,7 +300,7 @@
   </div>
   <input type="date" id="fDateOther" style="display:none;margin-top:8px">
 
-  <label class="f">HOW BAD? (1 = mild · 10 = worst)</label>
+  <label class="f" id="lSev">HOW BAD? (1 = mild · 10 = worst)</label>
   <div class="sevrow" id="fSev"></div>
 
   <label class="f">SYMPTOMS</label>
@@ -311,10 +312,10 @@
   <label class="f">MEDICATION TAKEN</label>
   <div class="chips" id="fMeds"></div>
 
-  <label class="f">DID THE MEDS HELP?</label>
+  <label class="f" id="lHelped">DID THE MEDS HELP?</label>
   <div class="chips" id="fHelped"></div>
 
-  <label class="f">HOW LONG DID IT LAST? (hours, optional)</label>
+  <label class="f" id="lDur">HOW LONG DID IT LAST? (hours, optional)</label>
   <input type="number" id="fDur" min="0" step="0.5" placeholder="e.g. 4" inputmode="decimal">
 
   <label class="f">NOTES</label>
@@ -337,13 +338,14 @@ const BASE_TRIGGERS = ["Neck pain","Exercise","Heat","Stress","Poor sleep","Dehy
 const BASE_SYMPTOMS = ["Teary eye","Aura","Light sensitivity","Noise sensitivity","Nausea","Vomiting","Neck pain"];
 const BASE_MEDS = ["Panadol Extra","Nurofen","Nurtec","Arthrexin","Metoclopramide","Ondansetron"];
 const HELPED = [["yes","Yes"],["partial","A little"],["no","No"]];
-const KINDS = [["migraine","Migraine"],["headache","Headache"],["escalated","Headache → Migraine"]];
+const KINDS = [["migraine","Migraine"],["headache","Headache"],["escalated","Headache → Migraine"],["warning","Early sign"]];
 /* entries without a kind (logged before this feature) are migraines */
 const kindOf = e => e.kind || "migraine";
-const isMig = e => kindOf(e) !== "headache";   /* escalated counts as a migraine */
+const isMig = e => { const k = kindOf(e); return k==="migraine" || k==="escalated"; };
+const isAttack = e => kindOf(e) !== "warning";   /* migraines + headaches; early signs excluded */
 function kindLabel(e){
   const k = kindOf(e);
-  return k==="headache" ? "Headache" : k==="escalated" ? "Headache → migraine" : null;
+  return k==="headache" ? "Headache" : k==="escalated" ? "Headache → migraine" : k==="warning" ? "Early sign" : null;
 }
 
 let db = load();
@@ -468,6 +470,11 @@ function kindRow(){
     c.onclick = ()=>{ fState.kind=v; kindRow(); };
     el.appendChild(c);
   });
+  /* early signs have no severity/duration/relief — just time, signs, meds, notes */
+  const warn = fState.kind==="warning";
+  [["lSev","fSev"],["lDur","fDur"],["lHelped","fHelped"]].forEach(([l,f])=>{
+    $(l).style.display = warn? "none":""; $(f).style.display = warn? "none":"";
+  });
 }
 function fillDayTime(){
   const daySel=$("fDay"), timeSel=$("fTime"), other=$("fDateOther");
@@ -518,21 +525,23 @@ function drawSheet(){
   $("fDur").value = fState.dur ?? "";
   $("fNotes").value = fState.notes || "";
 }
-function openSheet(entry){
+function openSheet(entry, kind){
   editingId = entry ? entry.id : null;
   fState = entry
     ? {dt:entry.dt, kind:kindOf(entry), sev:entry.sev, symptoms:(entry.symptoms||[]).slice(),
        triggers:entry.triggers.slice(), meds:entry.meds.slice(),
        helpedArr: entry.helped?[entry.helped]:[], dur:entry.dur, notes:entry.notes}
-    : {dt:localISO(nearest15(new Date())), kind:"migraine", sev:5, symptoms:[],
+    : {dt:localISO(nearest15(new Date())), kind:kind||"migraine", sev:5,
+       symptoms:kind==="warning"?["Teary eye"]:[],
        triggers:[], meds:[], helpedArr:[], dur:null, notes:""};
-  $("sheetTitle").textContent = entry ? "Edit migraine" : "Log a migraine";
+  $("sheetTitle").textContent = entry ? "Edit entry" : kind==="warning" ? "Log an early sign" : "Log a migraine";
   $("deleteBtn").style.display = entry ? "" : "none";
   drawSheet();
   $("scrim").classList.add("open"); $("sheet").classList.add("open");
 }
 function closeSheet(){ $("scrim").classList.remove("open"); $("sheet").classList.remove("open"); }
 $("logBtn").onclick = ()=>openSheet(null);
+$("warnBtn").onclick = ()=>openSheet(null, "warning");
 $("cancelBtn").onclick = closeSheet;
 $("scrim").onclick = closeSheet;
 $("saveBtn").onclick = ()=>{
@@ -543,7 +552,7 @@ $("saveBtn").onclick = ()=>{
     id: editingId || Date.now().toString(36)+Math.random().toString(36).slice(2,7),
     dt: day+"T"+$("fTime").value,
     kind: fState.kind,
-    sev: fState.sev,
+    sev: fState.kind==="warning"? null : (fState.sev||5),
     symptoms: fState.symptoms,
     triggers: fState.triggers,
     meds: fState.meds,
@@ -599,7 +608,9 @@ function entryCard(e){
   const med = e.meds.length? e.meds.join(", ") + (e.helped? ({yes:" · helped",partial:" · helped a little",no:" · didn't help"}[e.helped]) : "") : "no meds";
   const kl = kindLabel(e);
   const sym = (e.symptoms||[]).length? esc(e.symptoms.join(", "))+"<br>" : "";
-  const dot = kindOf(e)==="headache"
+  const dot = kindOf(e)==="warning"
+    ? '<div class="sevdot" style="background:var(--chip);color:var(--chip-ink)">👁</div>'
+    : kindOf(e)==="headache"
     ? '<div class="sevdot hd" style="color:'+sevColor(e.sev)+'">'+e.sev+'</div>'
     : '<div class="sevdot" style="background:'+sevColor(e.sev)+';color:'+sevInk(e.sev)+'">'+e.sev+'</div>';
   d.innerHTML = dot+
@@ -670,7 +681,7 @@ function chartMonthly(){
     const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
     buckets.push({y:d.getFullYear(), m:d.getMonth(), mig:0, hd:0});
   }
-  db.entries.forEach(e=>{
+  db.entries.filter(isAttack).forEach(e=>{
     const d = parseDT(e.dt);
     const b = buckets.find(b=>b.y===d.getFullYear() && b.m===d.getMonth());
     if(b) isMig(e)? b.mig++ : b.hd++;
@@ -731,7 +742,7 @@ function chartSeverity(){
   const el = $("chSeverity");
   const now = new Date();
   const from = new Date(now); from.setDate(from.getDate()-90);
-  const es = db.entries.filter(e=>parseDT(e.dt)>=from).sort((a,b)=>a.dt<b.dt?-1:1);
+  const es = db.entries.filter(isAttack).filter(e=>parseDT(e.dt)>=from).sort((a,b)=>a.dt<b.dt?-1:1);
   if(!es.length) return emptyViz(el,"No migraines in the last 90 days 🎉");
   const W=340,H=170, pl=22,pr=10,pt=12,pb=22;
   const s = baseSvg(W,H);
@@ -780,9 +791,10 @@ function chartSeverity(){
 /* symptom frequency — horizontal bars, top 6 */
 function chartSymptoms(){
   const el = $("chSymptoms");
-  const withS = db.entries.filter(e=>(e.symptoms||[]).length);
+  const atks = db.entries.filter(isAttack);
+  const withS = atks.filter(e=>(e.symptoms||[]).length);
   if(!withS.length) return emptyViz(el,"Tag symptoms on entries to see patterns here.");
-  hbarChart(el, withS, e=>e.symptoms, db.entries.length);
+  hbarChart(el, withS, e=>e.symptoms, atks.length);
 }
 
 /* shared horizontal-bar builder for symptom/trigger share charts */
@@ -815,9 +827,10 @@ function hbarChart(el, entries, getTags, denom){
 /* trigger frequency — horizontal bars, top 6 */
 function chartTriggers(){
   const el = $("chTriggers");
-  const withT = db.entries.filter(e=>e.triggers.length);
+  const atks = db.entries.filter(isAttack);
+  const withT = atks.filter(e=>e.triggers.length);
   if(!withT.length) return emptyViz(el,"Tag triggers on entries to see patterns here.");
-  hbarChart(el, withT, e=>e.triggers, db.entries.length);
+  hbarChart(el, withT, e=>e.triggers, atks.length);
 }
 
 /* time of day — 8 x 3h buckets */
@@ -825,7 +838,7 @@ function chartTod(){
   const el = $("chTod");
   if(!db.entries.length) return emptyViz(el,"Charts appear after the first entry.");
   const buckets = new Array(8).fill(0);
-  db.entries.forEach(e=>{ buckets[Math.floor(parseDT(e.dt).getHours()/3)]++; });
+  db.entries.filter(isAttack).forEach(e=>{ buckets[Math.floor(parseDT(e.dt).getHours()/3)]++; });
   const LBL = ["12a","3a","6a","9a","12p","3p","6p","9p"];
   const W=340,H=150, pl=8,pr=8,pt=16,pb=22;
   const max = Math.max(2,...buckets);
@@ -855,8 +868,29 @@ function chartTod(){
 /* ------------------------ insights ------------------------ */
 function renderInsights(){
   const el = $("insightsList"); el.innerHTML="";
-  const es = db.entries;
+  const es = db.entries.filter(isAttack);
   const items = [];
+  /* early-warning pattern: did a migraine follow within 24h? */
+  {
+    const ws = db.entries.filter(e=>kindOf(e)==="warning");
+    if(ws.length>=3){
+      const migs = db.entries.filter(isMig);
+      const leads = [];
+      let followed = 0;
+      ws.forEach(w=>{
+        const t = parseDT(w.dt).getTime();
+        const gaps = migs.map(m=>parseDT(m.dt).getTime()-t).filter(g=>g>=0 && g<=86400000).sort((a,b)=>a-b);
+        if(gaps.length){ followed++; leads.push(gaps[0]/3600000); }
+      });
+      let tx = "Of <b>"+ws.length+"</b> early signs, <b>"+followed+"</b> ("+Math.round(100*followed/ws.length)+"%) were followed by a migraine within 24h";
+      if(leads.length>=2){
+        leads.sort((a,b)=>a-b);
+        const med = leads[Math.floor(leads.length/2)];
+        tx += " — typical warning ~<b>"+(med<1? Math.round(med*60)+" min" : med.toFixed(1)+"h")+"</b>";
+      }
+      items.push(["👁️", tx]);
+    }
+  }
   if(es.length>=1){
     const now = new Date();
     const mNow = es.filter(e=>{const d=parseDT(e.dt);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length;
@@ -930,14 +964,14 @@ function download(name, text, type){
 }
 $("csvBtn").onclick = ()=>{
   const rows = [["Date","Time","Type","Severity (1-10)","Duration (h)","Symptoms","Triggers","Medication","Meds helped","Notes"]];
-  const TYPE_CSV = {migraine:"Migraine", headache:"Headache", escalated:"Headache that became a migraine"};
+  const TYPE_CSV = {migraine:"Migraine", headache:"Headache", escalated:"Headache that became a migraine", warning:"Early sign"};
   sorted().reverse().forEach(e=>{
     const d = parseDT(e.dt);
     rows.push([
       d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()),
       pad(d.getHours())+":"+pad(d.getMinutes()),
       TYPE_CSV[kindOf(e)],
-      e.sev, e.dur??"", (e.symptoms||[]).join("; "), e.triggers.join("; "), e.meds.join("; "),
+      e.sev??"", e.dur??"", (e.symptoms||[]).join("; "), e.triggers.join("; "), e.meds.join("; "),
       e.helped??"", e.notes||""
     ]);
   });
