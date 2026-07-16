@@ -334,8 +334,8 @@
 /* ------------------------ state ------------------------ */
 const KEY = "migraine.diary.v1";
 const BASE_TRIGGERS = ["Neck pain","Exercise","Heat","Stress","Poor sleep","Dehydration","Screens","Hormonal","Skipped meal","Weather change"];
-const BASE_SYMPTOMS = ["Light sensitivity","Noise sensitivity","Aura","Nausea","Vomiting","Neck pain"];
-const BASE_MEDS = ["Ibuprofen","Paracetamol","Triptan","Aspirin"];
+const BASE_SYMPTOMS = ["Teary eye","Aura","Light sensitivity","Noise sensitivity","Nausea","Vomiting","Neck pain"];
+const BASE_MEDS = ["Panadol Extra","Nurofen","Nurtec","Arthrexin","Metoclopramide","Ondansetron"];
 const HELPED = [["yes","Yes"],["partial","A little"],["no","No"]];
 const KINDS = [["migraine","Migraine"],["headache","Headache"],["escalated","Headache → Migraine"]];
 /* entries without a kind (logged before this feature) are migraines */
@@ -503,13 +503,15 @@ function drawSheet(){
   kindRow();
   fillDayTime();
   sevRow();
-  chipRow($("fSymptoms"), symptoms(), fState.symptoms, true, ()=>{
+  /* include the entry's own values even if they're no longer in the base lists */
+  const uniq = (a,b)=>a.concat(b.filter(x=>!a.includes(x)));
+  chipRow($("fSymptoms"), uniq(symptoms(), fState.symptoms), fState.symptoms, true, ()=>{
     const t = prompt("New symptom:"); if(t && t.trim()){ db.customSymptoms.push(t.trim()); save(); drawSheet(); }
   });
-  chipRow($("fTriggers"), triggers(), fState.triggers, true, ()=>{
+  chipRow($("fTriggers"), uniq(triggers(), fState.triggers), fState.triggers, true, ()=>{
     const t = prompt("New trigger:"); if(t && t.trim()){ db.customTriggers.push(t.trim()); save(); drawSheet(); }
   });
-  chipRow($("fMeds"), meds(), fState.meds, true, ()=>{
+  chipRow($("fMeds"), uniq(meds(), fState.meds), fState.meds, true, ()=>{
     const t = prompt("New medication:"); if(t && t.trim()){ db.customMeds.push(t.trim()); save(); drawSheet(); }
   });
   chipRow($("fHelped"), HELPED, fState.helpedArr, false);
