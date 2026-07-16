@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf1f5" id="metaTheme">
+<title>Migraine Diary</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#faf1f5;            /* page plane */
+    --surface:#ffffff;       /* cards & chart surface */
+    --surface2:#fdf6f9;
+    --ink:#33141f;
+    --ink2:#7a5b68;
+    --muted:#a4838f;
+    --grid:#f0dfe6;
+    --baseline:#dcc3cd;
+    --accent:#c2436c;        /* buttons, active states */
+    --accent-ink:#ffffff;
+    --series:#d55181;        /* chart mark hue (light) */
+    --series-soft:#f2b8cb;
+    --chip:#f7e7ee;
+    --chip-ink:#8a4a60;
+    --chip-on:#c2436c;
+    --chip-on-ink:#ffffff;
+    --danger:#c23a3a;
+    --ring:rgba(51,20,31,.08);
+    --shadow:0 6px 24px rgba(120,40,70,.10);
+  }
+  [data-theme="dark"]{
+    color-scheme: dark;
+    --bg:#171017;
+    --surface:#231823;
+    --surface2:#2b1e2b;
+    --ink:#fdeef5;
+    --ink2:#c9a8b6;
+    --muted:#9c7f8d;
+    --grid:#382a37;
+    --baseline:#4a3846;
+    --accent:#e57ba0;
+    --accent-ink:#31101d;
+    --series:#e57ba0;
+    --series-soft:#8a4a60;
+    --chip:#332433;
+    --chip-ink:#e3bccb;
+    --chip-on:#e57ba0;
+    --chip-on-ink:#31101d;
+    --danger:#ef7a7a;
+    --ring:rgba(255,230,240,.10);
+    --shadow:0 6px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--ink);
+    max-width:520px; margin:0 auto;
+    padding-bottom:calc(76px + env(safe-area-inset-bottom));
+  }
+  header{
+    display:flex; align-items:center; gap:10px;
+    padding:18px 18px 8px;
+  }
+  header .logo{width:34px;height:34px;flex:none}
+  header h1{font-size:20px;font-weight:700;letter-spacing:.2px;flex:1}
+  header h1 small{display:block;font-size:12px;font-weight:500;color:var(--ink2)}
+  .iconbtn{
+    border:none;background:var(--surface);color:var(--ink2);
+    width:38px;height:38px;border-radius:12px;font-size:17px;
+    box-shadow:0 1px 0 var(--ring), var(--shadow); cursor:pointer;
+  }
+  main{padding:6px 16px 16px}
+  .tab{display:none}
+  .tab.active{display:block;animation:fade .18s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .card{
+    background:var(--surface); border-radius:18px; padding:16px;
+    box-shadow:0 0 0 1px var(--ring), var(--shadow);
+    margin-bottom:14px;
+  }
+  .card h2{font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:10px;letter-spacing:.3px}
+
+  /* hero */
+  .hero{text-align:center;padding:26px 16px}
+  .hero .big{font-size:52px;font-weight:700;line-height:1;color:var(--ink)}
+  .hero .unit{font-size:14px;color:var(--ink2);margin-top:6px}
+  .statrow{display:flex;gap:12px}
+  .statrow .card{flex:1;margin-bottom:14px;padding:14px}
+  .stat .v{font-size:24px;font-weight:700}
+  .stat .l{font-size:11.5px;color:var(--ink2);margin-top:2px}
+
+  .bigbtn{
+    display:block;width:100%;border:none;cursor:pointer;
+    background:var(--accent);color:var(--accent-ink);
+    font-size:17px;font-weight:700;font-family:inherit;
+    padding:17px;border-radius:18px;margin:4px 0 18px;
+    box-shadow:var(--shadow);
+  }
+  .bigbtn:active{transform:scale(.985)}
+
+  /* chips */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    border:none;cursor:pointer;font-family:inherit;
+    background:var(--chip);color:var(--chip-ink);
+    font-size:14px;padding:9px 14px;border-radius:999px;
+  }
+  .chip.on{background:var(--chip-on);color:var(--chip-on-ink);font-weight:600}
+  .chip.add{background:transparent;box-shadow:inset 0 0 0 1.5px var(--baseline);color:var(--muted)}
+  .sevrow{display:flex;gap:6px}
+  .sev{
+    flex:1;border:none;cursor:pointer;font-family:inherit;aspect-ratio:1;
+    max-width:44px;border-radius:12px;font-size:14px;font-weight:600;
+    background:var(--chip);color:var(--chip-ink);
+  }
+  .sev.on{background:var(--chip-on);color:var(--chip-on-ink)}
+
+  label.f{display:block;font-size:12.5px;font-weight:600;color:var(--ink2);margin:16px 0 8px}
+  label.f:first-child{margin-top:0}
+  input[type=datetime-local],input[type=number],textarea{
+    width:100%;border:1.5px solid var(--baseline);background:var(--surface2);
+    color:var(--ink);border-radius:12px;padding:11px 12px;font-size:15px;font-family:inherit;
+  }
+  textarea{min-height:70px;resize:vertical}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+
+  /* sheet */
+  .scrim{position:fixed;inset:0;background:rgba(30,8,18,.45);display:none;z-index:40}
+  .scrim.open{display:block}
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;
+    max-width:520px;margin:0 auto;
+    background:var(--surface);border-radius:24px 24px 0 0;
+    padding:10px 18px calc(18px + env(safe-area-inset-bottom));
+    transform:translateY(105%);transition:transform .25s ease;
+    max-height:88vh;overflow-y:auto;
+    box-shadow:0 -8px 40px rgba(0,0,0,.25);
+  }
+  .sheet.open{transform:none}
+  .grab{width:38px;height:4px;border-radius:2px;background:var(--baseline);margin:4px auto 12px}
+  .sheet h3{font-size:18px;margin-bottom:4px}
+  .sheetbtns{display:flex;gap:10px;margin-top:20px}
+  .sheetbtns .bigbtn{margin:0}
+  .ghostbtn{
+    border:none;cursor:pointer;font-family:inherit;
+    background:var(--chip);color:var(--chip-ink);
+    font-size:15px;font-weight:600;padding:15px 18px;border-radius:16px;
+  }
+
+  /* history */
+  .month-h{font-size:12.5px;font-weight:700;color:var(--muted);letter-spacing:.6px;margin:18px 4px 8px;text-transform:uppercase}
+  .entry{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+  .entry .sevdot{
+    flex:none;width:40px;height:40px;border-radius:13px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:15px;color:#fff;
+  }
+  .entry .body{flex:1;min-width:0}
+  .entry .when{font-size:14.5px;font-weight:650}
+  .entry .meta{font-size:12.5px;color:var(--ink2);margin-top:3px;line-height:1.45}
+  .entry .notes{font-size:12.5px;color:var(--muted);margin-top:3px;font-style:italic}
+  .empty{color:var(--muted);text-align:center;padding:34px 20px;font-size:14px;line-height:1.6}
+  .empty .fl{font-size:30px;display:block;margin-bottom:8px}
+
+  /* charts */
+  .viz{width:100%;display:block}
+  .viz text{font-family:inherit}
+  .tt{
+    position:fixed;z-index:60;pointer-events:none;display:none;
+    background:var(--ink);color:var(--bg);font-size:12px;line-height:1.45;
+    padding:7px 10px;border-radius:9px;max-width:220px;
+    box-shadow:0 4px 14px rgba(0,0,0,.3);
+  }
+
+  /* insights */
+  .ins{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--grid)}
+  .ins:last-child{border-bottom:none;padding-bottom:0}
+  .ins:first-child{padding-top:0}
+  .ins .ic{flex:none;width:30px;height:30px;border-radius:10px;background:var(--chip);
+    display:flex;align-items:center;justify-content:center;font-size:14px}
+  .ins .tx{font-size:13.5px;line-height:1.5;color:var(--ink)}
+  .ins .tx b{font-weight:700}
+
+  /* nav */
+  nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    max-width:520px;margin:0 auto;
+    background:var(--surface);
+    box-shadow:0 -1px 0 var(--ring), 0 -6px 24px rgba(120,40,70,.08);
+    display:flex;
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  }
+  nav button{
+    flex:1;border:none;background:none;cursor:pointer;font-family:inherit;
+    color:var(--muted);font-size:11px;font-weight:600;
+    display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;
+  }
+  nav button .nic{font-size:19px;line-height:1}
+  nav button.on{color:var(--accent)}
+
+  .exportrow{display:flex;flex-wrap:wrap;gap:10px}
+  .exportrow .ghostbtn{flex:1;min-width:130px;padding:13px 10px;font-size:13.5px}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+    <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e57ba0"/><stop offset="1" stop-color="#b93a68"/>
+    </linearGradient></defs>
+    <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#lg)"/>
+    <g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round">
+      <path d="M14 38 L24 38 L28 26 L34 46 L38 33 L42 38 L50 38"/>
+    </g>
+    <circle cx="50" cy="20" r="5" fill="#ffd9e6"/>
+  </svg>
+  <h1 id="appTitle" title="Tap to personalise">Migraine Diary<small id="subGreet">Gentle tracking, better answers</small></h1>
+  <button class="iconbtn" id="themeBtn" title="Light / dark">🌙</button>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section class="tab active" id="tab-home">
+    <div class="card hero">
+      <div class="big" id="daysSince">–</div>
+      <div class="unit" id="daysSinceLabel">days migraine-free</div>
+    </div>
+    <button class="bigbtn" id="logBtn">+ &nbsp;Log a migraine</button>
+    <div class="statrow">
+      <div class="card stat"><div class="v" id="stMonth">0</div><div class="l">this month</div></div>
+      <div class="card stat"><div class="v" id="stAvgSev">–</div><div class="l">avg severity</div></div>
+      <div class="card stat"><div class="v" id="stAvgMo">–</div><div class="l">avg / month</div></div>
+    </div>
+    <div class="card" id="recentCard">
+      <h2>RECENT</h2>
+      <div id="recentList"></div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="tab" id="tab-history">
+    <div id="historyList"></div>
+  </section>
+
+  <!-- TRENDS -->
+  <section class="tab" id="tab-trends">
+    <div class="card"><h2>INSIGHTS</h2><div id="insightsList"></div></div>
+    <div class="card"><h2>MIGRAINES PER MONTH</h2><div id="chMonthly"></div></div>
+    <div class="card"><h2>SEVERITY · LAST 90 DAYS</h2><div id="chSeverity"></div></div>
+    <div class="card"><h2>TRIGGERS · SHARE OF MIGRAINES</h2><div id="chTriggers"></div></div>
+    <div class="card"><h2>TIME OF DAY</h2><div id="chTod"></div></div>
+    <div class="card">
+      <h2>FOR THE NEUROLOGIST</h2>
+      <div class="exportrow">
+        <button class="ghostbtn" id="csvBtn">⬇ CSV report</button>
+        <button class="ghostbtn" id="jsonBtn">⬇ Backup</button>
+        <button class="ghostbtn" id="importBtn">⬆ Restore</button>
+      </div>
+      <input type="file" id="importFile" accept=".json" hidden>
+      <div class="hint">CSV opens in Excel — one row per migraine with date, time, severity, duration, triggers, meds and notes. Backup saves everything; Restore loads it on a new phone.</div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="home" class="on"><span class="nic">🏠</span>Home</button>
+  <button data-tab="history"><span class="nic">📖</span>History</button>
+  <button data-tab="trends"><span class="nic">📈</span>Trends</button>
+</nav>
+
+<!-- ENTRY SHEET -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <h3 id="sheetTitle">Log a migraine</h3>
+
+  <label class="f">WHEN IT STARTED</label>
+  <input type="datetime-local" id="fWhen">
+
+  <label class="f">HOW BAD? (1 = mild · 10 = worst)</label>
+  <div class="sevrow" id="fSev"></div>
+
+  <label class="f">TRIGGERS</label>
+  <div class="chips" id="fTriggers"></div>
+
+  <label class="f">MEDICATION TAKEN</label>
+  <div class="chips" id="fMeds"></div>
+
+  <label class="f">DID THE MEDS HELP?</label>
+  <div class="chips" id="fHelped"></div>
+
+  <label class="f">HOW LONG DID IT LAST? (hours, optional)</label>
+  <input type="number" id="fDur" min="0" step="0.5" placeholder="e.g. 4" inputmode="decimal">
+
+  <label class="f">NOTES</label>
+  <textarea id="fNotes" placeholder="Anything else — aura, where the pain was, what you were doing…"></textarea>
+
+  <div class="sheetbtns">
+    <button class="ghostbtn" id="deleteBtn" style="display:none">Delete</button>
+    <button class="ghostbtn" id="cancelBtn">Cancel</button>
+    <button class="bigbtn" style="flex:1" id="saveBtn">Save</button>
+  </div>
+</div>
+
+<div class="tt" id="tt"></div>
+
+<script>
+"use strict";
+/* ------------------------ state ------------------------ */
+const KEY = "migraine.diary.v1";
+const BASE_TRIGGERS = ["Neck pain","Exercise","Heat","Stress","Poor sleep","Dehydration","Screens","Hormonal","Skipped meal","Weather change"];
+const BASE_MEDS = ["Ibuprofen","Paracetamol","Triptan","Aspirin"];
+const HELPED = [["yes","Yes"],["partial","A little"],["no","No"]];
+
+let db = load();
+function load(){
+  try{
+    const d = JSON.parse(localStorage.getItem(KEY));
+    if(d && Array.isArray(d.entries)) return d;
+  }catch(e){}
+  return {entries:[], customTriggers:[], customMeds:[], theme:null, name:null};
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(db)); }
+const triggers = () => BASE_TRIGGERS.concat(db.customTriggers);
+const meds = () => BASE_MEDS.concat(db.customMeds);
+
+/* ------------------------ theme ------------------------ */
+function applyTheme(){
+  const dark = db.theme ? db.theme==="dark"
+             : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  document.getElementById("themeBtn").textContent = dark ? "☀️" : "🌙";
+  document.getElementById("metaTheme").content = dark ? "#171017" : "#faf1f5";
+}
+document.getElementById("themeBtn").onclick = () => {
+  const cur = document.documentElement.dataset.theme;
+  db.theme = cur==="dark" ? "light" : "dark"; save(); applyTheme(); renderAll();
+};
+applyTheme();
+
+/* ------------------------ helpers ------------------------ */
+const $ = id => document.getElementById(id);
+
+/* ------------------------ name (stored locally, never in the hosted code) ------------------------ */
+function applyName(){
+  const t = $("appTitle");
+  t.childNodes[0].textContent = db.name ? db.name+"’s Migraine Diary" : "Migraine Diary";
+  $("subGreet").textContent = db.name ? "Gentle tracking, better answers" : "Tap the title to add your name";
+  document.title = db.name ? db.name+"’s Migraine Diary" : "Migraine Diary";
+}
+$("appTitle").onclick = ()=>{
+  const n = prompt("Whose diary is this? (first name — stays on this phone)", db.name||"");
+  if(n!==null){ db.name = n.trim()||null; save(); applyName(); }
+};
+applyName();
+const pad = n => String(n).padStart(2,"0");
+function localISO(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes()); }
+function parseDT(s){ return new Date(s); }
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+function fmtWhen(s){
+  const d = parseDT(s);
+  let h = d.getHours()%12||12, ap = d.getHours()<12?"am":"pm";
+  return DAYS[d.getDay()].slice(0,3)+" "+d.getDate()+" "+MONTHS[d.getMonth()]+" · "+h+":"+pad(d.getMinutes())+ap;
+}
+/* validated 5-step rose ramps (severity 1-2 .. 9-10), one per surface */
+const SEV_LIGHT = ["#e57ba0","#d55181","#b93a68","#93264d","#6d1533"];
+const SEV_DARK  = ["#f2b8cb","#e57ba0","#d55181","#b93a68","#93264d"];
+function sevStep(sev){ return Math.min(4, Math.floor((Math.max(1,Math.min(10,sev))-1)/2)); }
+function isDark(){ return document.documentElement.dataset.theme==="dark"; }
+function sevColor(sev){ return (isDark()? SEV_DARK : SEV_LIGHT)[sevStep(sev)]; }
+function sevInk(sev){
+  const i = sevStep(sev);
+  return (isDark()? i<=2 : i<=1) ? "#33141f" : "#ffffff";
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function sorted(){ return db.entries.slice().sort((a,b)=> a.dt<b.dt?1:-1); }
+
+/* ------------------------ tabs ------------------------ */
+document.querySelectorAll("nav button").forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
+    document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.id==="tab-"+b.dataset.tab));
+    hideTT();
+    if(b.dataset.tab==="trends") renderTrends();
+  };
+});
+
+/* ------------------------ entry sheet ------------------------ */
+let editingId = null;
+let fState = null;
+
+function chipRow(el, items, selected, multi, onAdd){
+  el.innerHTML = "";
+  items.forEach(it=>{
+    const v = Array.isArray(it)? it[0] : it, label = Array.isArray(it)? it[1] : it;
+    const c = document.createElement("button");
+    c.type="button"; c.className="chip"+(selected.includes(v)?" on":""); c.textContent=label;
+    c.onclick = ()=>{
+      if(multi){
+        const i = selected.indexOf(v);
+        i>=0 ? selected.splice(i,1) : selected.push(v);
+      }else{
+        selected.length=0; if(!c.classList.contains("on")) selected.push(v);
+      }
+      chipRow(el, items, selected, multi, onAdd);
+    };
+    el.appendChild(c);
+  });
+  if(onAdd){
+    const a = document.createElement("button");
+    a.type="button"; a.className="chip add"; a.textContent="+ add";
+    a.onclick = onAdd;
+    el.appendChild(a);
+  }
+}
+function sevRow(){
+  const el = $("fSev"); el.innerHTML="";
+  for(let i=1;i<=10;i++){
+    const b = document.createElement("button");
+    b.type="button"; b.className="sev"+(fState.sev===i?" on":""); b.textContent=i;
+    if(fState.sev===i){ b.style.background = sevColor(i); b.style.color = sevInk(i); }
+    b.onclick = ()=>{ fState.sev=i; sevRow(); };
+    el.appendChild(b);
+  }
+}
+function drawSheet(){
+  $("fWhen").value = fState.dt;
+  sevRow();
+  chipRow($("fTriggers"), triggers(), fState.triggers, true, ()=>{
+    const t = prompt("New trigger:"); if(t && t.trim()){ db.customTriggers.push(t.trim()); save(); drawSheet(); }
+  });
+  chipRow($("fMeds"), meds(), fState.meds, true, ()=>{
+    const t = prompt("New medication:"); if(t && t.trim()){ db.customMeds.push(t.trim()); save(); drawSheet(); }
+  });
+  chipRow($("fHelped"), HELPED, fState.helpedArr, false);
+  $("fDur").value = fState.dur ?? "";
+  $("fNotes").value = fState.notes || "";
+}
+function openSheet(entry){
+  editingId = entry ? entry.id : null;
+  fState = entry
+    ? {dt:entry.dt, sev:entry.sev, triggers:entry.triggers.slice(), meds:entry.meds.slice(),
+       helpedArr: entry.helped?[entry.helped]:[], dur:entry.dur, notes:entry.notes}
+    : {dt:localISO(new Date()), sev:5, triggers:[], meds:[], helpedArr:[], dur:null, notes:""};
+  $("sheetTitle").textContent = entry ? "Edit migraine" : "Log a migraine";
+  $("deleteBtn").style.display = entry ? "" : "none";
+  drawSheet();
+  $("scrim").classList.add("open"); $("sheet").classList.add("open");
+}
+function closeSheet(){ $("scrim").classList.remove("open"); $("sheet").classList.remove("open"); }
+$("logBtn").onclick = ()=>openSheet(null);
+$("cancelBtn").onclick = closeSheet;
+$("scrim").onclick = closeSheet;
+$("saveBtn").onclick = ()=>{
+  const e = {
+    id: editingId || Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+    dt: $("fWhen").value || localISO(new Date()),
+    sev: fState.sev,
+    triggers: fState.triggers,
+    meds: fState.meds,
+    helped: fState.meds.length ? (fState.helpedArr[0]||null) : null,
+    dur: $("fDur").value===""? null : Math.max(0,parseFloat($("fDur").value)),
+    notes: $("fNotes").value.trim()
+  };
+  if(editingId){ db.entries = db.entries.map(x=>x.id===editingId? e : x); }
+  else db.entries.push(e);
+  save(); closeSheet(); renderAll();
+};
+$("deleteBtn").onclick = ()=>{
+  if(!editingId) return;
+  if(confirm("Delete this entry?")){
+    db.entries = db.entries.filter(x=>x.id!==editingId);
+    save(); closeSheet(); renderAll();
+  }
+};
+
+/* ------------------------ home ------------------------ */
+function renderHome(){
+  const es = sorted();
+  const now = new Date();
+  if(es.length){
+    const last = parseDT(es[0].dt);
+    const days = Math.floor((now - last)/86400000);
+    $("daysSince").textContent = days;
+    $("daysSinceLabel").textContent = days===1 ? "day migraine-free" : "days migraine-free";
+  }else{
+    $("daysSince").textContent = "♡";
+    $("daysSinceLabel").textContent = "no migraines logged yet";
+  }
+  const mNow = es.filter(e=>{const d=parseDT(e.dt); return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();});
+  $("stMonth").textContent = mNow.length;
+  $("stAvgSev").textContent = es.length? (es.reduce((s,e)=>s+e.sev,0)/es.length).toFixed(1) : "–";
+  // avg/month over the span of data (min 1 month)
+  if(es.length){
+    const first = parseDT(es[es.length-1].dt);
+    const months = Math.max(1,(now.getFullYear()-first.getFullYear())*12 + now.getMonth()-first.getMonth() + 1);
+    $("stAvgMo").textContent = (es.length/months).toFixed(1);
+  }else $("stAvgMo").textContent = "–";
+
+  const rl = $("recentList");
+  if(!es.length){ rl.innerHTML = '<div class="empty"><span class="fl">🌸</span>Tap “Log a migraine” when one starts —<br>even a rough entry helps spot patterns.</div>'; return; }
+  rl.innerHTML = "";
+  es.slice(0,3).forEach(e=>rl.appendChild(entryCard(e)));
+}
+function entryCard(e){
+  const d = document.createElement("div");
+  d.className="entry"; d.style.padding="9px 0";
+  const trig = e.triggers.length? e.triggers.join(", ") : "no triggers noted";
+  const med = e.meds.length? e.meds.join(", ") + (e.helped? ({yes:" · helped",partial:" · helped a little",no:" · didn't help"}[e.helped]) : "") : "no meds";
+  d.innerHTML = '<div class="sevdot" style="background:'+sevColor(e.sev)+';color:'+sevInk(e.sev)+'">'+e.sev+'</div>'+
+    '<div class="body"><div class="when">'+fmtWhen(e.dt)+(e.dur!=null?' · '+e.dur+'h':'')+'</div>'+
+    '<div class="meta">'+esc(trig)+'<br>'+esc(med)+'</div>'+
+    (e.notes? '<div class="notes">“'+esc(e.notes)+'”</div>':'')+'</div>';
+  d.onclick = ()=>openSheet(e);
+  return d;
+}
+
+/* ------------------------ history ------------------------ */
+function renderHistory(){
+  const el = $("historyList"); el.innerHTML="";
+  const es = sorted();
+  if(!es.length){ el.innerHTML = '<div class="card"><div class="empty"><span class="fl">📖</span>Nothing here yet.</div></div>'; return; }
+  let curKey = "";
+  let card = null;
+  es.forEach(e=>{
+    const d = parseDT(e.dt);
+    const k = d.getFullYear()+"-"+d.getMonth();
+    if(k!==curKey){
+      curKey = k;
+      const h = document.createElement("div"); h.className="month-h";
+      h.textContent = MONTHS[d.getMonth()]+" "+d.getFullYear();
+      el.appendChild(h);
+      card = document.createElement("div"); card.className="card";
+      el.appendChild(card);
+    }
+    card.appendChild(entryCard(e));
+  });
+}
+
+/* ------------------------ charts (hand-rolled SVG) ------------------------ */
+const NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs){
+  const el = document.createElementNS(NS, tag);
+  for(const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function baseSvg(w,h){
+  const s = svgEl("svg",{viewBox:"0 0 "+w+" "+h,class:"viz"});
+  s.style.height = "auto";
+  return s;
+}
+function showTT(html, x, y){
+  const t = $("tt");
+  t.innerHTML = html; t.style.display="block";
+  const r = t.getBoundingClientRect();
+  let lx = Math.min(Math.max(8, x - r.width/2), innerWidth - r.width - 8);
+  let ly = y - r.height - 12; if(ly<8) ly = y + 14;
+  t.style.left = lx+"px"; t.style.top = ly+"px";
+}
+function hideTT(){ $("tt").style.display="none"; }
+document.addEventListener("click", e=>{ if(!e.target.closest(".viz")) hideTT(); });
+
+function emptyViz(el, msg){
+  el.innerHTML = '<div class="empty" style="padding:20px">'+msg+'</div>';
+}
+
+/* monthly bar chart — last 12 months */
+function chartMonthly(){
+  const el = $("chMonthly");
+  if(!db.entries.length) return emptyViz(el,"Charts appear after the first entry.");
+  const now = new Date();
+  const buckets = [];
+  for(let i=11;i>=0;i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    buckets.push({y:d.getFullYear(), m:d.getMonth(), n:0});
+  }
+  db.entries.forEach(e=>{
+    const d = parseDT(e.dt);
+    const b = buckets.find(b=>b.y===d.getFullYear() && b.m===d.getMonth());
+    if(b) b.n++;
+  });
+  const W=340,H=170, pl=8,pr=8,pt=18,pb=22;
+  const max = Math.max(4, ...buckets.map(b=>b.n));
+  const s = baseSvg(W,H);
+  const bw = Math.min(18,(W-pl-pr)/12 - 6);
+  const step = (W-pl-pr)/12;
+  const y0 = H-pb;
+  // hairline gridlines at clean steps
+  const gstep = max<=6?2:Math.ceil(max/3);
+  for(let g=gstep; g<=max; g+=gstep){
+    const gy = y0 - (g/max)*(H-pt-pb);
+    s.appendChild(svgEl("line",{x1:pl,x2:W-pr,y1:gy,y2:gy,stroke:css("--grid"),"stroke-width":1}));
+  }
+  s.appendChild(svgEl("line",{x1:pl,x2:W-pr,y1:y0,y2:y0,stroke:css("--baseline"),"stroke-width":1}));
+  buckets.forEach((b,i)=>{
+    const x = pl + step*i + (step-bw)/2;
+    const bh = b.n? Math.max(3,(b.n/max)*(H-pt-pb)) : 0;
+    if(b.n){
+      // rounded top, square baseline
+      const r = Math.min(4, bh);
+      const p = svgEl("path",{d:
+        "M"+x+" "+y0+" V"+(y0-bh+r)+" Q"+x+" "+(y0-bh)+" "+(x+r)+" "+(y0-bh)+
+        " H"+(x+bw-r)+" Q"+(x+bw)+" "+(y0-bh)+" "+(x+bw)+" "+(y0-bh+r)+" V"+y0+" Z",
+        fill:css("--series")});
+      p.style.cursor="pointer";
+      p.addEventListener("click",ev=>{ev.stopPropagation();showTT("<b>"+MONTHS[b.m]+" "+b.y+"</b><br>"+b.n+" migraine"+(b.n!==1?"s":""),ev.clientX,ev.clientY);});
+      s.appendChild(p);
+      const cap = svgEl("text",{x:x+bw/2,y:y0-bh-5,"text-anchor":"middle","font-size":10,fill:css("--ink2")});
+      cap.textContent = b.n; s.appendChild(cap);
+    }
+    const lbl = svgEl("text",{x:x+bw/2,y:H-7,"text-anchor":"middle","font-size":9.5,fill:css("--muted")});
+    lbl.textContent = MONTHS[b.m][0]; s.appendChild(lbl);
+  });
+  el.innerHTML=""; el.appendChild(s);
+}
+
+/* severity dots — last 90 days */
+function chartSeverity(){
+  const el = $("chSeverity");
+  const now = new Date();
+  const from = new Date(now); from.setDate(from.getDate()-90);
+  const es = db.entries.filter(e=>parseDT(e.dt)>=from).sort((a,b)=>a.dt<b.dt?-1:1);
+  if(!es.length) return emptyViz(el,"No migraines in the last 90 days 🎉");
+  const W=340,H=170, pl=22,pr=10,pt=12,pb=22;
+  const s = baseSvg(W,H);
+  const x = d => pl + ((d-from)/(now-from))*(W-pl-pr);
+  const y = sev => (H-pb) - ((sev-0)/10)*(H-pt-pb);
+  for(let g=2; g<=10; g+=2){
+    s.appendChild(svgEl("line",{x1:pl,x2:W-pr,y1:y(g),y2:y(g),stroke:css("--grid"),"stroke-width":1}));
+    const t = svgEl("text",{x:pl-6,y:y(g)+3,"text-anchor":"end","font-size":9.5,fill:css("--muted")});
+    t.textContent=g; s.appendChild(t);
+  }
+  s.appendChild(svgEl("line",{x1:pl,x2:W-pr,y1:H-pb,y2:H-pb,stroke:css("--baseline"),"stroke-width":1}));
+  // month tick labels
+  let lastM = -1;
+  for(let d=new Date(from); d<=now; d.setDate(d.getDate()+1)){
+    if(d.getDate()===1 && d.getMonth()!==lastM){
+      lastM = d.getMonth();
+      const t = svgEl("text",{x:x(d),y:H-7,"font-size":9.5,fill:css("--muted")});
+      t.textContent = MONTHS[d.getMonth()]; s.appendChild(t);
+    }
+  }
+  es.forEach(e=>{
+    const d = parseDT(e.dt);
+    // surface ring then dot (>=8px mark, 2px surface ring)
+    const g = svgEl("g",{});
+    g.appendChild(svgEl("circle",{cx:x(d),cy:y(e.sev),r:6.5,fill:css("--surface")}));
+    const dot = svgEl("circle",{cx:x(d),cy:y(e.sev),r:4.5,fill:sevColor(e.sev)});
+    g.style.cursor="pointer";
+    g.addEventListener("click",ev=>{ev.stopPropagation();
+      showTT("<b>"+fmtWhen(e.dt)+"</b><br>Severity "+e.sev+(e.triggers.length?"<br>"+esc(e.triggers.join(", ")):""),ev.clientX,ev.clientY);});
+    g.appendChild(dot); s.appendChild(g);
+  });
+  el.innerHTML=""; el.appendChild(s);
+}
+
+/* trigger frequency — horizontal bars, top 6 */
+function chartTriggers(){
+  const el = $("chTriggers");
+  const withT = db.entries.filter(e=>e.triggers.length);
+  if(!withT.length) return emptyViz(el,"Tag triggers on entries to see patterns here.");
+  const counts = {};
+  withT.forEach(e=>e.triggers.forEach(t=>counts[t]=(counts[t]||0)+1));
+  const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const n = db.entries.length;
+  const rowH = 34, W=340, pl=112, pr=44;
+  const H = rows.length*rowH + 6;
+  const s = baseSvg(W,H);
+  const max = rows[0][1];
+  rows.forEach((r,i)=>{
+    const yc = i*rowH + rowH/2;
+    const w = Math.max(4,(r[1]/max)*(W-pl-pr));
+    const name = svgEl("text",{x:pl-10,y:yc+4,"text-anchor":"end","font-size":11.5,fill:css("--ink2")});
+    name.textContent = r[0].length>15? r[0].slice(0,14)+"…" : r[0]; s.appendChild(name);
+    const bar = svgEl("path",{d:
+      "M"+pl+" "+(yc-8)+" H"+(pl+w-4)+" Q"+(pl+w)+" "+(yc-8)+" "+(pl+w)+" "+(yc-4)+
+      " V"+(yc+4)+" Q"+(pl+w)+" "+(yc+8)+" "+(pl+w-4)+" "+(yc+8)+" H"+pl+" Z",
+      fill:css("--series")});
+    bar.style.cursor="pointer";
+    bar.addEventListener("click",ev=>{ev.stopPropagation();showTT("<b>"+esc(r[0])+"</b><br>"+r[1]+" of "+n+" migraines",ev.clientX,ev.clientY);});
+    s.appendChild(bar);
+    const v = svgEl("text",{x:pl+w+7,y:yc+4,"font-size":11,fill:css("--ink2"),"font-weight":600});
+    v.textContent = Math.round(100*r[1]/n)+"%"; s.appendChild(v);
+  });
+  el.innerHTML=""; el.appendChild(s);
+}
+
+/* time of day — 8 x 3h buckets */
+function chartTod(){
+  const el = $("chTod");
+  if(!db.entries.length) return emptyViz(el,"Charts appear after the first entry.");
+  const buckets = new Array(8).fill(0);
+  db.entries.forEach(e=>{ buckets[Math.floor(parseDT(e.dt).getHours()/3)]++; });
+  const LBL = ["12a","3a","6a","9a","12p","3p","6p","9p"];
+  const W=340,H=150, pl=8,pr=8,pt=16,pb=22;
+  const max = Math.max(2,...buckets);
+  const s = baseSvg(W,H);
+  const step=(W-pl-pr)/8, bw=Math.min(22,step-8), y0=H-pb;
+  s.appendChild(svgEl("line",{x1:pl,x2:W-pr,y1:y0,y2:y0,stroke:css("--baseline"),"stroke-width":1}));
+  buckets.forEach((n,i)=>{
+    const x = pl+step*i+(step-bw)/2;
+    if(n){
+      const bh = Math.max(3,(n/max)*(H-pt-pb)), r=Math.min(4,bh);
+      const p = svgEl("path",{d:
+        "M"+x+" "+y0+" V"+(y0-bh+r)+" Q"+x+" "+(y0-bh)+" "+(x+r)+" "+(y0-bh)+
+        " H"+(x+bw-r)+" Q"+(x+bw)+" "+(y0-bh)+" "+(x+bw)+" "+(y0-bh+r)+" V"+y0+" Z",
+        fill:css("--series")});
+      p.style.cursor="pointer";
+      p.addEventListener("click",ev=>{ev.stopPropagation();showTT("<b>"+LBL[i]+"–"+LBL[(i+1)%8]+"</b><br>"+n+" migraine"+(n!==1?"s":""),ev.clientX,ev.clientY);});
+      s.appendChild(p);
+      const cap = svgEl("text",{x:x+bw/2,y:y0-bh-5,"text-anchor":"middle","font-size":10,fill:css("--ink2")});
+      cap.textContent=n; s.appendChild(cap);
+    }
+    const l = svgEl("text",{x:x+bw/2,y:H-7,"text-anchor":"middle","font-size":9.5,fill:css("--muted")});
+    l.textContent=LBL[i]; s.appendChild(l);
+  });
+  el.innerHTML=""; el.appendChild(s);
+}
+
+/* ------------------------ insights ------------------------ */
+function renderInsights(){
+  const el = $("insightsList"); el.innerHTML="";
+  const es = db.entries;
+  const items = [];
+  if(es.length>=1){
+    const now = new Date();
+    const mNow = es.filter(e=>{const d=parseDT(e.dt);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length;
+    const prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const mPrev = es.filter(e=>{const d=parseDT(e.dt);return d.getMonth()===prev.getMonth()&&d.getFullYear()===prev.getFullYear();}).length;
+    if(mPrev||mNow) items.push(["📅", "<b>"+mNow+"</b> this month vs <b>"+mPrev+"</b> last month"+(mNow<mPrev?" — trending better 💚":mNow>mPrev?"":"")]);
+  }
+  if(es.length>=3){
+    const counts={}; let withT=0;
+    es.forEach(e=>{ if(e.triggers.length){withT++; e.triggers.forEach(t=>counts[t]=(counts[t]||0)+1);} });
+    const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+    if(top) items.push(["⚡","Most common trigger: <b>"+esc(top[0])+"</b> — noted on "+Math.round(100*top[1]/es.length)+"% of migraines"]);
+    // med effectiveness
+    const meff={};
+    es.forEach(e=>{ if(e.meds.length&&e.helped){ e.meds.forEach(m=>{ (meff[m]=meff[m]||[0,0]); meff[m][1]++; meff[m][0]+= e.helped==="yes"?1:e.helped==="partial"?0.5:0; }); }});
+    const best = Object.entries(meff).filter(([,v])=>v[1]>=2).sort((a,b)=>b[1][0]/b[1][1]-a[1][0]/a[1][1])[0];
+    if(best) items.push(["💊","<b>"+esc(best[0])+"</b> helps most — "+Math.round(100*best[1][0]/best[1][1])+"% relief across "+best[1][1]+" uses"]);
+    // time of day
+    const tod = new Array(4).fill(0); // night/morning/afternoon/evening
+    es.forEach(e=>{const h=parseDT(e.dt).getHours(); tod[h<6?0:h<12?1:h<18?2:3]++;});
+    const TODN=["overnight","in the morning","in the afternoon","in the evening"];
+    const ti = tod.indexOf(Math.max(...tod));
+    if(Math.max(...tod) >= es.length*0.4) items.push(["🕒","Most migraines start <b>"+TODN[ti]+"</b>"]);
+    // weekday
+    const wd = new Array(7).fill(0);
+    es.forEach(e=>wd[parseDT(e.dt).getDay()]++);
+    const wi = wd.indexOf(Math.max(...wd));
+    if(Math.max(...wd) >= Math.max(3, es.length*0.3)) items.push(["📆","<b>"+DAYS[wi]+"s</b> are the most common day"]);
+    // duration
+    const durs = es.filter(e=>e.dur!=null).map(e=>e.dur);
+    if(durs.length>=3) items.push(["⏱️","Typical migraine lasts about <b>"+(durs.reduce((a,b)=>a+b,0)/durs.length).toFixed(1)+" hours</b>"]);
+  }
+  if(!items.length){
+    el.innerHTML = '<div class="empty" style="padding:14px">Insights unlock after a few entries — the more triggers and meds you tag, the smarter this gets.</div>';
+    return;
+  }
+  items.forEach(([ic,tx])=>{
+    const d = document.createElement("div"); d.className="ins";
+    d.innerHTML = '<div class="ic">'+ic+'</div><div class="tx">'+tx+'</div>';
+    el.appendChild(d);
+  });
+}
+
+/* ------------------------ export / import ------------------------ */
+function download(name, text, type){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text],{type}));
+  a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+$("csvBtn").onclick = ()=>{
+  const rows = [["Date","Time","Severity (1-10)","Duration (h)","Triggers","Medication","Meds helped","Notes"]];
+  sorted().reverse().forEach(e=>{
+    const d = parseDT(e.dt);
+    rows.push([
+      d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()),
+      pad(d.getHours())+":"+pad(d.getMinutes()),
+      e.sev, e.dur??"", e.triggers.join("; "), e.meds.join("; "),
+      e.helped??"", e.notes||""
+    ]);
+  });
+  const csv = rows.map(r=>r.map(c=>{
+    c = String(c);
+    return /[",\n]/.test(c) ? '"'+c.replace(/"/g,'""')+'"' : c;
+  }).join(",")).join("\r\n");
+  download((db.name? db.name.toLowerCase()+"-":"")+"migraine-report.csv", "﻿"+csv, "text/csv");
+};
+$("jsonBtn").onclick = ()=> download((db.name? db.name.toLowerCase()+"-":"")+"migraine-backup.json", JSON.stringify(db,null,1), "application/json");
+$("importBtn").onclick = ()=> $("importFile").click();
+$("importFile").onchange = ev=>{
+  const f = ev.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const d = JSON.parse(r.result);
+      if(!d || !Array.isArray(d.entries)) throw 0;
+      if(confirm("Replace current data with this backup ("+d.entries.length+" entries)?")){
+        db = d; save(); applyTheme(); renderAll();
+      }
+    }catch(e){ alert("That file doesn't look like a valid backup."); }
+    ev.target.value = "";
+  };
+  r.readAsText(f);
+};
+
+/* ------------------------ render ------------------------ */
+function renderTrends(){ renderInsights(); chartMonthly(); chartSeverity(); chartTriggers(); chartTod(); }
+function renderAll(){ renderHome(); renderHistory(); renderTrends(); }
+renderAll();
+
+/* ------------------------ PWA ------------------------ */
+if("serviceWorker" in navigator && location.protocol==="https:"){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
